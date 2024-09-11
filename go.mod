@@ -1,4 +1,4 @@
-module github.com/growthbook/growthbook-golang
+module github.com/dmarket/growthbook-golang
 
 go 1.18
 

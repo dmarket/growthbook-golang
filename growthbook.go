@@ -376,18 +376,20 @@ func (gb *GrowthBook) Feature(key string) *FeatureResult {
 // feature key.
 func (gb *GrowthBook) EvalFeature(id string) *FeatureResult {
 	gb.inner.RLock()
-	defer gb.inner.RUnlock()
+	forcedFeatureValues := gb.inner.forcedFeatureValues
+	featureContext := gb.inner.context
+	gb.inner.RUnlock()
 
 	// Global override.
-	if gb.inner.forcedFeatureValues != nil {
-		if override, ok := gb.inner.forcedFeatureValues[id]; ok {
+	if forcedFeatureValues != nil {
+		if override, ok := forcedFeatureValues[id]; ok {
 			logInfo("Global override", id, override)
 			return gb.getFeatureResult(id, override, OverrideResultSource, "", nil, nil)
 		}
 	}
 
 	// Handle unknown features.
-	feature, ok := gb.inner.context.Features[id]
+	feature, ok := featureContext.Features[id]
 	if !ok {
 		logWarn("Unknown feature", id)
 		return gb.getFeatureResult(id, nil, UnknownResultSource, "", nil, nil)

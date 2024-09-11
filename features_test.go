@@ -2,6 +2,7 @@ package growthbook
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -299,4 +300,42 @@ func TestFeaturesUsageTracking(t *testing.T) {
 	if !called {
 		t.Errorf("expected feature tracking callback to be called")
 	}
+}
+
+var gbFeature1JSON = []byte(`{
+    "pro.organizations": {
+		"rules": [
+            {
+                "condition": {
+                    "email": {
+                        "$regex": "\\+\\d+organizations@example.org$"
+                    }
+                },
+                "force": true
+            }
+		]
+    }
+}`)
+
+func Test_GrowthBookDeadLock(t *testing.T) {
+	fm := ParseFeatureMap(gbFeature1JSON)
+
+	gb := New(NewContext())
+	gb = gb.WithFeatures(fm)
+
+	wg := new(sync.WaitGroup)
+	wg.Add(8)
+	for i := 0; i < 8; i++ {
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 10240; j++ {
+				featureRes := gb.WithAttributes(Attributes{
+					"userID": "some_user_id",
+					"email":  "some_email",
+				}).EvalFeature("pro.organizations")
+				_ = featureRes
+			}
+		}(i)
+	}
+	wg.Wait()
 }
